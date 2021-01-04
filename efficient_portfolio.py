@@ -11,21 +11,43 @@ import pandas as pd
 from pandas_datareader import data
 import scipy.optimize as sco
 import matplotlib.pyplot as plt
+import math
 
 plt.style.use('fivethirtyeight')
 np.random.seed(777)
-%matplotlib inline
-%config InlineBackend.figure_format = 'retina'
+#%matplotlib inline
+#%config InlineBackend.figure_format = 'retina'
 
 def portfolio_annualised_performance(weights, mean_returns, cov_matrix):
     # multiplying with 252 to make daily returns as annual
-    returns = np.sum(mean_returns * weights ) *252
     std = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights))) * np.sqrt(252)
+    returns = np.sum(mean_returns * weights ) *252
     return std, returns
 
 #taking negative as we have to maximize portfolio with high sharpe ratio using "minimize"optimization
 def neg_sharpe_ratio(weights, mean_returns, cov_matrix, risk_free_rate):
     p_var, p_ret = portfolio_annualised_performance(weights, mean_returns, cov_matrix)
+    return -(p_ret - risk_free_rate) / p_var
+
+#taking negative as we have to maximize portfolio with high sharpe ratio using "minimize"optimization
+def neg_sortino_ratio(weights, mean_returns, dd_cov_matrix, risk_free_rate):
+    
+    """
+    For the Sortino Ratio, we calculate the downside deviation of the expected returns by taking 
+    the difference between each period’s return and the target return. If a period’s return is 
+    greater than the target return, the difference is simply set to 0. Then, we square the value 
+    of the difference. Next, we calculate the average of all squared differences. The square root 
+    of the average is the downside deviation.
+    
+    df['downside_returns'] = 0
+    df.loc[df['Returns'] < target, 'downside_returns'] = df['Returns']**2
+    expected_return = df['Returns'].mean()
+    down_stdev = np.sqrt(df['downside_returns'].mean())
+    sortino_ratio = (expected_return - rfr)/down_stdev
+    print(sortino_ratio)
+    """
+    
+    p_var, p_ret = portfolio_annualised_performance(weights, mean_returns, dd_cov_matrix)
     return -(p_ret - risk_free_rate) / p_var
 
 def portfolio_volatility(weights, mean_returns, cov_matrix):
@@ -135,7 +157,7 @@ def display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, target):
 
 
 
-symbols = ['AAPL', 'FB', 'GOOG', 'MSFT', 'AMZN', 'NKE', 'TSLA']
+symbols = ['AAPL', 'FB', 'GOOGL', 'MSFT', 'AMZN', 'NKE', 'TSLA']
 # Read Data
 df = data.DataReader(symbols, 'yahoo', start='2018/01/01', end='2020/12/31')
 
@@ -146,6 +168,12 @@ df = df['Adj Close']
 
 # Covariance correlation
 cov_matrix = df.pct_change().apply(lambda x: np.log(1+x)).cov()
+
+# use this to consider sortino ratio instead of sharpe ratio
+# sortino considers only downside deviation
+df_dd = df.pct_change()
+dd_cov_matrix = df_dd.where(df_dd > 0, 0).apply(lambda x: np.log(1+x)).cov()
+
 corr_matrix = df.pct_change().apply(lambda x: np.log(1+x)).corr()
 mean_returns = df.pct_change().apply(lambda x: np.log(1+x)).mean()
 
@@ -169,5 +197,9 @@ print(random_port_var)
 
 target = np.linspace(0.30, 0.50, 50)
 
+# EFP using sharpe ratio
 display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, target)
+
+# EFP using sortino ratio
+display_ef_with_selected(mean_returns, dd_cov_matrix, risk_free_rate, target)
 
