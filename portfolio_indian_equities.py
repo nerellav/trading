@@ -48,31 +48,52 @@ es.efficient_return(0.20)
 # We can use the same helper methods as before
 weights = es.clean_weights()
 print(weights)
-es.portfolio_performance(verbose=True)
+mu_20, _, _ = es.portfolio_performance(verbose=True, risk_free_rate=0.04)
 
 # allocate 10 lacs based on the weights and latest prices
 allocation = pd.Series(weights, index=returns.columns) * 1000000
-allocation.name = 'Allocation'
+allocation.name = 'Allocation 20%'
 print(allocation)
 
-beta = 0.90
+es.efficient_return(0.30)
+
+# We can use the same helper methods as before
+weights_30 = es.clean_weights()
+print(weights_30)
+mu_30, semi_deviation, sortino_ratio = es.portfolio_performance(verbose=True, risk_free_rate=0.04)
+# allocate 10 lacs based on the weights and latest prices
+allocation_30 = pd.Series(weights_30, index=returns.columns) * 1000000
+allocation_30.name = 'Allocation 30'
+print(allocation_30)
+
+beta = 0.95
 df = returns
 df = df.resample("W").first()
 mu = expected_returns.mean_historical_return(df, frequency=52)
 historical_rets = expected_returns.returns_from_prices(df).dropna(axis=0, how="any")
 cd = EfficientCDaR(mu, historical_rets, beta=beta)
 print(cd.efficient_return(0.20))
-cd.portfolio_performance(verbose=True)
+mu_cd_20, _ = cd.portfolio_performance(verbose=True)
 
 cd_weights = cd.clean_weights()
 # allocate 10 lacs based on the weights and latest prices
-allocation = pd.Series(cd_weights, index=returns.columns) * 1000000
-allocation.name = 'Allocation'
-print(allocation)
+allocation_cd_20 = pd.Series(cd_weights, index=returns.columns) * 1000000
+allocation_cd_20.name = 'Allocation Cdar 20'
+print(allocation_cd_20)
+
+print(cd.efficient_return(0.40))
+mu_cd_40, _ = cd.portfolio_performance(verbose=True)
+
+cd_weights = cd.clean_weights()
+# allocate 10 lacs based on the weights and latest prices
+allocation_cd_40 = pd.Series(cd_weights, index=returns.columns) * 1000000
+allocation_cd_40.name = 'Allocation Cdar 40'
+print(allocation_cd_40)
 
 # print weights and cd_weights side by side so that we can comprare
 weights_comparison = pd.concat(
-    [pd.Series(weights, index=returns.columns) * 1000000, pd.Series(cd_weights, index=returns.columns) * 1000000],
+    [allocation, allocation_30, allocation_cd_20, allocation_cd_40],
     axis=1)
-weights_comparison.columns = ['ES Weights', 'CDaR Weights']
-print(weights_comparison)
+weights_comparison.columns = [f'ES Exp Ret@{mu_20*100:.1f}%', f'ES Exp ret@{mu_30*100:.1f}%',
+                              f'CDaR Exp ret@{mu_cd_20*100:.1f}%',  f'CDaR Exp ret@{mu_cd_40*100:.1f}%']
+print(weights_comparison.to_markdown())
