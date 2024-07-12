@@ -22,6 +22,7 @@ tickers = ['RELIANCE.NS', 'INFY.NS',
            'M&M.NS', 'SANSERA.NS', 'PAGEIND.NS', 'BOSCHLTD.NS',
            'SUNPHARMA.NS', 'ASIANPAINT.NS', 'NESTLEIND.NS', 'TATAMOTORS.NS']
 
+tickers = list(set(tickers))
 
 # Load the data from the pickle file
 # data = load_data_from_files(tickers, '2021-01-01', '2024-06-30')
